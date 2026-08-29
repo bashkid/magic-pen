@@ -114,7 +114,7 @@ final class ToolbarView: NSView {
         logo.onMouseUp = { [weak self] didDrag in
             guard let self else { return }
             self.window?.hasShadow = true
-            if !didDrag { self.collapsed.toggle(); self.sync() }
+            if !didDrag { self.toggleCollapse() }
         }
     }
 
@@ -197,6 +197,10 @@ final class ToolbarView: NSView {
     }
 
     @objc private func colorWellChanged() { state.setColor(colorWell.color) }
+
+    /// Same effect as clicking the logo without dragging - exposed so the
+    /// ⌘T keyboard shortcut can reach it via AppController.
+    func toggleCollapse() { collapsed.toggle(); sync() }
 
     // --------------------------------------------------------------- clicks
     private func handleCell(_ id: String, _ cell: CellButton) {

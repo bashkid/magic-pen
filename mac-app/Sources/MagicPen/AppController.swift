@@ -83,5 +83,15 @@ final class AppController {
         }
     }
 
-    @objc private func quit() { NSApp.terminate(nil) }
+    // internal (not private) so the global keyboard-shortcut monitor in
+    // main.swift can call it directly for ⌘Q - a second, always-reachable
+    // way to quit, independent of the menu bar being clickable.
+    @objc func quit() { NSApp.terminate(nil) }
+
+    /// Collapse/expand the cell strip - same action as clicking the logo
+    /// without dragging. Exposed here so a keyboard shortcut (⌘T) can
+    /// trigger it without reaching into ToolbarView's private state.
+    func toggleToolbarCollapse() {
+        (toolbarPanel?.contentView as? ToolbarView)?.toggleCollapse()
+    }
 }

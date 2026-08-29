@@ -29,6 +29,20 @@ repositions those automatically if they'd run off-screen, so there's no
 manual "flip to the left edge" logic to maintain here (that was a real bug we
 had to fix by hand in the Chrome extension's flyouts).
 
+## Keyboard shortcuts
+
+Work while the overlay is active (except ⌘Q, which always works):
+
+| Shortcut | Action |
+|---|---|
+| ⌘1 – ⌘9 | Select tool: Pointer, Pen, Highlighter, Eraser, Line, Rectangle, Ellipse, Text, Laser |
+| ⌘Z / ⇧⌘Z | Undo / Redo |
+| ⌘⌫ | Clear all |
+| ⌘C | Copy full-screen shot to clipboard |
+| ⌘S | Take a full-screen screenshot |
+| ⌘T | Show/hide the toolbar strip (same as clicking the logo) |
+| ⌘Q | Quit - works even if the overlay is covering the menu bar |
+
 The current-colour swatch is a native `NSColorWell`, so you get the system
 colour picker for free instead of a hand-built palette.
 
