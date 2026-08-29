@@ -1,0 +1,11 @@
+.DS_Store
+
+# Mac app build artifacts
+mac-app/.build/
+mac-app/MagicPen.app/
+
+# graphify knowledge-graph tooling output (local cache/state, not source)
+graphify-out/
+
+# Claude Code local session state
+.claude/

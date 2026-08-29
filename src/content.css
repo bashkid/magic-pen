@@ -1,0 +1,38 @@
+/* Host elements only. The toolbar's own styles live in its shadow root. */
+
+.annotator-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483644;
+  pointer-events: none;
+}
+
+.annotator-canvas--active { pointer-events: auto; cursor: crosshair; }
+.annotator-canvas--hidden { display: none; }
+
+/* Screen shade / whiteboard sits behind the strokes. */
+#annotator-shade {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483643;
+  pointer-events: none;
+}
+
+#annotator-toolbar-host {
+  position: fixed;
+  z-index: 2147483647;
+  top: 72px;
+  left: 24px;
+}
+
+/* Inline text-tool editor, placed at the click point. */
+.annotator-text-input {
+  position: absolute;
+  z-index: 2147483646;
+  background: transparent;
+  border: 1px dashed rgba(0, 122, 255, .9);
+  outline: none;
+  padding: 2px 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  min-width: 120px;
+}

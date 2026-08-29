@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Magic Pen",
+  "version": "0.1.0",
+  "description": "Draw, highlight, laser-point and screen-record on any page. Recordings save straight to disk.",
+  "permissions": [
+    "desktopCapture",
+    "offscreen",
+    "downloads",
+    "storage",
+    "activeTab",
+    "scripting",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "action": {
+    "default_title": "Toggle annotator (draw on this page)"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "css": [
+        "src/content.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
