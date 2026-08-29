@@ -15,7 +15,7 @@ final class CellButton: NSView {
     /// divider instead), which is what gives each row a visible boundary.
     var showsTopDivider: Bool = true { didSet { topDivider.isHidden = !showsTopDivider } }
 
-    init(id: String, image: NSImage?, tooltip: String) {
+    init(id: String, image: NSImage?, tooltip: String, iconSize: CGFloat = 20) {
         self.id = id
         super.init(frame: .zero)
         translatesAutoresizingMaskIntoConstraints = false
@@ -51,8 +51,8 @@ final class CellButton: NSView {
             heightAnchor.constraint(equalToConstant: 34),
             imageView.centerXAnchor.constraint(equalTo: centerXAnchor),
             imageView.centerYAnchor.constraint(equalTo: centerYAnchor),
-            imageView.widthAnchor.constraint(equalToConstant: 20),
-            imageView.heightAnchor.constraint(equalToConstant: 20),
+            imageView.widthAnchor.constraint(equalToConstant: iconSize),
+            imageView.heightAnchor.constraint(equalToConstant: iconSize),
             topDivider.topAnchor.constraint(equalTo: topAnchor),
             topDivider.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 4),
             topDivider.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -4),

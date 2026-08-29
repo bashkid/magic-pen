@@ -119,14 +119,18 @@ final class ToolbarView: NSView {
     }
 
     // ----------------------------------------------------------------- cells
-    private struct CellSpec { let id: String; let image: NSImage?; let tooltip: String }
+    private struct CellSpec { let id: String; let image: NSImage?; let tooltip: String; var iconSize: CGFloat = 20 }
+    // pointer/eye/pen read noticeably smaller than the other cells at the
+    // default 20pt - arrow.png and eye.png carry a lot of built-in padding
+    // around their glyph, and pencil.tip is a thin SF Symbol - so those three
+    // get a larger box to compensate.
     private let specs: [CellSpec] = [
-        CellSpec(id: "pointer", image: Icons.arrow, tooltip: "Pointer — click through to the screen"),
-        CellSpec(id: "eye", image: Icons.eye, tooltip: "Show / hide all annotations"),
+        CellSpec(id: "pointer", image: Icons.arrow, tooltip: "Pointer — click through to the screen", iconSize: 26),
+        CellSpec(id: "eye", image: Icons.eye, tooltip: "Show / hide all annotations", iconSize: 26),
         CellSpec(id: "highlighter", image: Icons.symbol("highlighter"), tooltip: "Highlighter"),
         CellSpec(id: "shapes", image: Icons.symbol("square.on.circle"), tooltip: "Shapes, text and laser"),
         CellSpec(id: "eraser", image: Icons.symbol("eraser"), tooltip: "Eraser"),
-        CellSpec(id: "pen", image: Icons.symbol("pencil.tip"), tooltip: "Pen"),
+        CellSpec(id: "pen", image: Icons.symbol("pencil.tip"), tooltip: "Pen", iconSize: 26),
         CellSpec(id: "size", image: Icons.symbol("circle.fill"), tooltip: "Stroke size and opacity"),
         CellSpec(id: "undo", image: Icons.symbol("arrow.uturn.backward"), tooltip: "Undo — ⌘Z / redo ⇧⌘Z"),
         CellSpec(id: "clear", image: Icons.symbol("trash"), tooltip: "Clear all"),
@@ -149,7 +153,7 @@ final class ToolbarView: NSView {
             cellStack.centerXAnchor.constraint(equalTo: centerXAnchor)
         ])
         for (index, spec) in specs.enumerated() {
-            let cell = CellButton(id: spec.id, image: spec.image, tooltip: spec.tooltip)
+            let cell = CellButton(id: spec.id, image: spec.image, tooltip: spec.tooltip, iconSize: spec.iconSize)
             cell.showsTopDivider = index > 0
             cell.onClick = { [weak self] in self?.handleCell(spec.id, cell) }
             cellStack.addArrangedSubview(cell)
@@ -159,19 +163,29 @@ final class ToolbarView: NSView {
 
     private func buildColorRow() {
         let quad = colorQuad
-        quad.orientation = .horizontal
+        // 2x2 instead of a single 1x4 row: an outer vertical stack holding two
+        // horizontal rows of two swatches each.
+        quad.orientation = .vertical
         quad.distribution = .fillEqually
         quad.spacing = 2
-        for color in AnnotatorState.quickColors {
-            let swatch = NSButton(title: "", target: nil, action: nil)
-            swatch.bezelStyle = .regularSquare
-            swatch.isBordered = false
-            swatch.wantsLayer = true
-            swatch.layer?.backgroundColor = color.cgColor
-            swatch.heightAnchor.constraint(equalToConstant: 16).isActive = true
-            swatch.target = ClosureTarget.attach({ [weak self] in self?.state.setColor(color) }, to: nil)
-            swatch.action = #selector(ClosureTarget.fire)
-            quad.addArrangedSubview(swatch)
+        let colors = AnnotatorState.quickColors
+        for rowStart in stride(from: 0, to: colors.count, by: 2) {
+            let row = NSStackView()
+            row.orientation = .horizontal
+            row.distribution = .fillEqually
+            row.spacing = 2
+            for color in colors[rowStart..<min(rowStart + 2, colors.count)] {
+                let swatch = NSButton(title: "", target: nil, action: nil)
+                swatch.bezelStyle = .regularSquare
+                swatch.isBordered = false
+                swatch.wantsLayer = true
+                swatch.layer?.backgroundColor = color.cgColor
+                swatch.heightAnchor.constraint(equalToConstant: 16).isActive = true
+                swatch.target = ClosureTarget.attach({ [weak self] in self?.state.setColor(color) }, to: nil)
+                swatch.action = #selector(ClosureTarget.fire)
+                row.addArrangedSubview(swatch)
+            }
+            quad.addArrangedSubview(row)
         }
         quad.translatesAutoresizingMaskIntoConstraints = false
 

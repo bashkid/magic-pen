@@ -6,10 +6,11 @@ final class ToolbarPanel: NSPanel {
         // extension's cells/colour row/swatches all run flush to the strip's
         // edges with zero side padding, only the strip's own border shows.
         // Height must fit the content precisely: logo (44) + 12 cells at
-        // 34pt with no gaps (408, hairlines instead) + colour quad (22) +
-        // colour well (30) + margins between them (~20) = ~518pt. A shorter
-        // panel silently clips the colour row and well outside the window.
-        super.init(contentRect: NSRect(x: 0, y: 0, width: 40, height: 520),
+        // 34pt with no gaps (408, hairlines instead) + colour quad (2 rows of
+        // swatches, ~34) + colour well (30) + margins between them (~20) =
+        // ~536pt. A shorter panel silently clips the colour row and well
+        // outside the window.
+        super.init(contentRect: NSRect(x: 0, y: 0, width: 40, height: 540),
                     styleMask: [.borderless, .nonactivatingPanel, .utilityWindow],
                     backing: .buffered, defer: false)
         isOpaque = false
@@ -26,6 +27,6 @@ final class ToolbarPanel: NSPanel {
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         isMovableByWindowBackground = false
         isReleasedWhenClosed = false
-        contentView = ToolbarView(frame: NSRect(x: 0, y: 0, width: 40, height: 520))
+        contentView = ToolbarView(frame: NSRect(x: 0, y: 0, width: 40, height: 540))
     }
 }
