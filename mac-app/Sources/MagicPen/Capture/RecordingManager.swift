@@ -19,12 +19,32 @@ final class RecordingManager: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     private func start() {
+        // Read the panel's window number here, on the caller's (main) thread -
+        // NSWindow.windowNumber is main-actor isolated, so touching it from
+        // inside the Task below would need a hop; an Int has no such restriction.
+        let panelWindowNumber = AppController.shared.toolbarPanel?.windowNumber
         Task {
             do {
                 let content = try await SCShareableContent.current
-                guard let display = content.displays.first else { return }
-                let filter = SCContentFilter(display: display, excludingWindows: [])
-                let scale = Int(NSScreen.main?.backingScaleFactor ?? 2)
+                // content.displays is unordered - .first alone isn't guaranteed
+                // to be the Mac's actual main display, so a multi-monitor setup
+                // could silently record the wrong screen.
+                let mainDisplayID = CGMainDisplayID()
+                guard let display = content.displays.first(where: { $0.displayID == mainDisplayID })
+                    ?? content.displays.first else { return }
+                let screen = NSScreen.screens.first {
+                    ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == display.displayID
+                }
+                // Exclude the floating toolbar the same way screenshots hide it
+                // (ScreenshotManager.withToolbarHidden) - otherwise it's baked
+                // into the corner of every recording.
+                var excludedWindows: [SCWindow] = []
+                if let panelWindowNumber,
+                   let scWindow = content.windows.first(where: { $0.windowID == UInt32(panelWindowNumber) }) {
+                    excludedWindows.append(scWindow)
+                }
+                let filter = SCContentFilter(display: display, excludingWindows: excludedWindows)
+                let scale = Int(screen?.backingScaleFactor ?? 2)
                 let config = SCStreamConfiguration()
                 config.width = display.width * scale
                 config.height = display.height * scale
