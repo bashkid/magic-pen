@@ -93,6 +93,76 @@ final class SliderViewController: NSViewController {
     private func weightChanged() {}
 }
 
+/// Lets the user set a countdown, in minutes, that then runs as a small
+/// on-screen pill (CountdownTimerManager) - the Timer cell's flyout. A fresh
+/// instance is built each time the cell is clicked (same pattern as the
+/// other popovers), so it just reads CountdownTimerManager.shared.isRunning
+/// once, at open time, to pick its layout.
+final class TimerViewController: NSViewController {
+    private let onDone: () -> Void
+    init(onDone: @escaping () -> Void) {
+        self.onDone = onDone
+        super.init(nibName: nil, bundle: nil)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func loadView() {
+        let running = CountdownTimerManager.shared.isRunning
+
+        if running {
+            let status = NSTextField(labelWithString: "Timer running")
+            status.font = .systemFont(ofSize: 11)
+            let stopButton = NSButton(title: "Stop Timer", target: nil, action: nil)
+            stopButton.bezelStyle = .rounded
+            stopButton.target = ClosureTarget.attach({ [weak self] in
+                CountdownTimerManager.shared.stop()
+                self?.onDone()
+            }, to: nil)
+            stopButton.action = #selector(ClosureTarget.fire)
+
+            let stack = NSStackView(views: [status, stopButton])
+            stack.orientation = .vertical
+            stack.spacing = 8
+            stack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+            view = stack
+            return
+        }
+
+        let label = NSTextField(labelWithString: "Minutes")
+        label.font = .systemFont(ofSize: 10)
+
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .decimal
+        formatter.minimum = 0.1
+        formatter.maximum = 240
+        formatter.maximumFractionDigits = 1
+
+        let field = NSTextField(string: "5")
+        field.formatter = formatter
+        field.alignment = .center
+        field.widthAnchor.constraint(equalToConstant: 44).isActive = true
+
+        let inputRow = NSStackView(views: [label, field])
+        inputRow.orientation = .horizontal
+        inputRow.spacing = 6
+
+        let startButton = NSButton(title: "Start Timer", target: nil, action: nil)
+        startButton.bezelStyle = .rounded
+        startButton.target = ClosureTarget.attach({ [weak self, weak field] in
+            let minutes = field?.doubleValue ?? 5
+            CountdownTimerManager.shared.start(minutes: max(0.1, minutes))
+            self?.onDone()
+        }, to: nil)
+        startButton.action = #selector(ClosureTarget.fire)
+
+        let stack = NSStackView(views: [inputRow, startButton])
+        stack.orientation = .vertical
+        stack.spacing = 8
+        stack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
+        view = stack
+    }
+}
+
 /// NSButton/NSSlider only take @objc selector actions - this glues a Swift
 /// closure to one so popovers can stay declarative without a delegate per row.
 final class ClosureTarget: NSObject {

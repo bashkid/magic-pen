@@ -1,5 +1,13 @@
 import AppKit
 
+/// A borderless NSWindow can't become key by default (AppKit's standard
+/// override point for this) - without it, the text tool's NSTextField never
+/// actually receives typed keystrokes even after -makeFirstResponder:
+/// succeeds, since keyDown events only route to a *key* window.
+private final class OverlayWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+}
+
 /// Owns one borderless, transparent, full-screen window per display. Mirrors
 /// content.js's strokeCanvas/liveCanvas pair conceptually, except here a
 /// single CanvasView per screen redraws both committed and live strokes -
@@ -45,8 +53,8 @@ final class OverlayManager {
             // bar/Dock region entirely fixes that; drawing simply can't
             // reach those strips, which is the right tradeoff.
             let rect = screen.visibleFrame
-            let window = NSWindow(contentRect: rect, styleMask: [.borderless],
-                                   backing: .buffered, defer: false, screen: screen)
+            let window = OverlayWindow(contentRect: rect, styleMask: [.borderless],
+                                        backing: .buffered, defer: false, screen: screen)
             window.isOpaque = false
             window.backgroundColor = .clear
             window.hasShadow = false

@@ -24,6 +24,10 @@ final class CellButton: NSView {
 
         imageView.image = image
         imageView.imageScaling = .scaleProportionallyUpOrDown
+        // Matches the extension's `.cell { color: #17171a }` - without an
+        // explicit tint, template SF Symbols fall back to a faint default
+        // gray that reads as faded next to the extension's solid glyphs.
+        imageView.contentTintColor = NSColor(hex: "#17171a")
         imageView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(imageView)
 

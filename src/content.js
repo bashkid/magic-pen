@@ -25,7 +25,7 @@
   window.__myAnnotatorLoaded = true;
 
   // Quick blocks shown in the 2x2 grid, then the wider palette in flyouts.
-  const QUICK = ['#00aeef', '#ec008c', '#000000', '#ffffff'];
+  const QUICK = ['#000000', '#ffffff', '#ec008c', '#00aeef'];
   const PALETTE = [
     '#000000', '#ffffff', '#e8352a', '#ff8a00', '#fff200',
     '#17a969', '#00aeef', '#007aff', '#ec008c', '#9930f2'

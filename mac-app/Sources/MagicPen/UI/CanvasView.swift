@@ -183,6 +183,12 @@ final class CanvasView: NSView {
         field.focusRingType = .none
         field.delegate = self
         addSubview(field)
+        // Two-part fix for typed characters silently going nowhere: the app
+        // runs as an LSUIElement accessory (no Dock icon), so its windows
+        // don't receive keyboard events unless the app is explicitly
+        // activated even after becoming key (OverlayWindow.canBecomeKey).
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKey()
         window?.makeFirstResponder(field)
         activeTextField = field
         textFieldOrigin = globalP

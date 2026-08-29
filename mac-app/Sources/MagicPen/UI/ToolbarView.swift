@@ -41,7 +41,12 @@ final class ToolbarView: NSView {
     private var panelOrigin: CGPoint = .zero
     private let colorWell = NSColorWell()
     private let stripBackground = NSView()
-    private let colorQuad = NSStackView()
+    // A plain NSView with explicit constraints, not an NSStackView: nested
+    // stacks (vertical quad of horizontal rows) need every level's alignment
+    // set just right to stretch arranged subviews to fill, and getting that
+    // wrong silently collapses the swatches to invisible slivers instead of
+    // erroring - explicit constraints make the intended layout unambiguous.
+    private let colorQuad = NSView()
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -135,6 +140,7 @@ final class ToolbarView: NSView {
         CellSpec(id: "undo", image: Icons.symbol("arrow.uturn.backward"), tooltip: "Undo — ⌘Z / redo ⇧⌘Z"),
         CellSpec(id: "clear", image: Icons.symbol("trash"), tooltip: "Clear all"),
         CellSpec(id: "board", image: Icons.symbol("rectangle.on.rectangle"), tooltip: "Record, save, restore"),
+        CellSpec(id: "timer", image: Icons.symbol("timer"), tooltip: "On-screen countdown timer"),
         CellSpec(id: "camera", image: Icons.symbol("camera"), tooltip: "Screenshot"),
         CellSpec(id: "copy", image: Icons.symbol("doc.on.clipboard"), tooltip: "Copy full-screen screenshot")
     ]
@@ -163,31 +169,47 @@ final class ToolbarView: NSView {
 
     private func buildColorRow() {
         let quad = colorQuad
-        // 2x2 instead of a single 1x4 row: an outer vertical stack holding two
-        // horizontal rows of two swatches each.
-        quad.orientation = .vertical
-        quad.distribution = .fillEqually
-        quad.spacing = 2
-        let colors = AnnotatorState.quickColors
-        for rowStart in stride(from: 0, to: colors.count, by: 2) {
-            let row = NSStackView()
-            row.orientation = .horizontal
-            row.distribution = .fillEqually
-            row.spacing = 2
-            for color in colors[rowStart..<min(rowStart + 2, colors.count)] {
-                let swatch = NSButton(title: "", target: nil, action: nil)
-                swatch.bezelStyle = .regularSquare
-                swatch.isBordered = false
-                swatch.wantsLayer = true
-                swatch.layer?.backgroundColor = color.cgColor
-                swatch.heightAnchor.constraint(equalToConstant: 16).isActive = true
-                swatch.target = ClosureTarget.attach({ [weak self] in self?.state.setColor(color) }, to: nil)
-                swatch.action = #selector(ClosureTarget.fire)
-                row.addArrangedSubview(swatch)
-            }
-            quad.addArrangedSubview(row)
-        }
         quad.translatesAutoresizingMaskIntoConstraints = false
+        let colors = AnnotatorState.quickColors
+        let gap: CGFloat = 2
+        let rowHeight: CGFloat = 16
+        var swatches: [NSButton] = []
+        for color in colors {
+            let swatch = NSButton(title: "", target: nil, action: nil)
+            swatch.bezelStyle = .regularSquare
+            swatch.isBordered = false
+            swatch.wantsLayer = true
+            swatch.layer?.backgroundColor = color.cgColor
+            swatch.translatesAutoresizingMaskIntoConstraints = false
+            swatch.target = ClosureTarget.attach({ [weak self] in self?.state.setColor(color) }, to: nil)
+            swatch.action = #selector(ClosureTarget.fire)
+            quad.addSubview(swatch)
+            swatches.append(swatch)
+        }
+        // 2x2 grid via explicit constraints (each column pinned to the quad's
+        // leading/trailing/center, each row stacked top to bottom) rather than
+        // a nested NSStackView, whose alignment defaults left the rows
+        // shrunk to their buttons' intrinsic near-zero width.
+        for (index, swatch) in swatches.enumerated() {
+            let col = index % 2
+            let row = index / 2
+            if col == 0 {
+                swatch.leadingAnchor.constraint(equalTo: quad.leadingAnchor).isActive = true
+                swatch.trailingAnchor.constraint(equalTo: quad.centerXAnchor, constant: -gap / 2).isActive = true
+            } else {
+                swatch.leadingAnchor.constraint(equalTo: quad.centerXAnchor, constant: gap / 2).isActive = true
+                swatch.trailingAnchor.constraint(equalTo: quad.trailingAnchor).isActive = true
+            }
+            swatch.heightAnchor.constraint(equalToConstant: rowHeight).isActive = true
+            if row == 0 {
+                swatch.topAnchor.constraint(equalTo: quad.topAnchor).isActive = true
+            } else {
+                swatch.topAnchor.constraint(equalTo: swatches[index - 2].bottomAnchor, constant: gap).isActive = true
+            }
+        }
+        if let lastLeft = swatches.indices.last(where: { $0 % 2 == 0 }).map({ swatches[$0] }) {
+            quad.bottomAnchor.constraint(equalTo: lastLeft.bottomAnchor).isActive = true
+        }
 
         colorWell.translatesAutoresizingMaskIntoConstraints = false
         colorWell.target = self
@@ -254,6 +276,11 @@ final class ToolbarView: NSView {
                 IconListViewController.Item(title: state.recording ? "Stop recording" : "Record screen",
                                              image: Icons.symbol("record.circle"), isOn: state.recording) {
                     RecordingManager.shared.toggle()
+                    // Otherwise this flyout just sits open on screen - transient
+                    // popovers only auto-dismiss on a click OUTSIDE themselves,
+                    // not on a click on one of their own buttons - and gets
+                    // baked into the recording that just started.
+                    self.activePopover?.close()
                 },
                 IconListViewController.Item(title: "Save session", image: Icons.symbol("square.and.arrow.down"), isOn: false) {
                     SessionStore.shared.save()
@@ -263,6 +290,9 @@ final class ToolbarView: NSView {
                 }
             ]
             showPopover(IconListViewController(items: items), from: cell)
+
+        case "timer":
+            showPopover(TimerViewController { [weak self] in self?.activePopover?.close() }, from: cell)
 
         case "camera":
             let items: [IconListViewController.Item] = [
@@ -306,6 +336,7 @@ final class ToolbarView: NSView {
             case "shapes": cell.isOn = [.line, .rect, .ellipse, .text, .laser].contains(state.currentTool)
             case "eye": cell.isOn = !state.annotationsVisible
             case "board": cell.isOn = state.recording
+            case "timer": cell.isOn = CountdownTimerManager.shared.isRunning
             default: cell.isOn = false
             }
         }

@@ -12,7 +12,13 @@ enum Icons {
 
     /// Simple SF Symbol-backed glyphs for tools that don't have a bundled
     /// bitmap - keeps the toolbar legible without shipping a full icon set.
+    /// Regular weight at default config renders faint/thin against the white
+    /// panel (no tint = a washed-out default gray) - medium weight plus an
+    /// explicit dark tint in CellButton is what makes these pop the way the
+    /// extension's `.cell { color: #17171a }` glyphs do.
     static func symbol(_ name: String, fallbackText: String = "") -> NSImage? {
-        NSImage(systemSymbolName: name, accessibilityDescription: fallbackText)
+        let base = NSImage(systemSymbolName: name, accessibilityDescription: fallbackText)
+        let config = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        return base?.withSymbolConfiguration(config)
     }
 }

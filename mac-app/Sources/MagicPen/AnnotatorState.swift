@@ -14,8 +14,8 @@ final class AnnotatorState {
     static let shared = AnnotatorState()
 
     static let quickColors: [NSColor] = [
-        NSColor(hex: "#00aeef"), NSColor(hex: "#ec008c"),
-        NSColor(hex: "#000000"), NSColor(hex: "#ffffff")
+        NSColor(hex: "#000000"), NSColor(hex: "#ffffff"),
+        NSColor(hex: "#ec008c"), NSColor(hex: "#00aeef")
     ]
     static let palette: [NSColor] = [
         "#000000", "#ffffff", "#e8352a", "#ff8a00", "#fff200",
