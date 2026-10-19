@@ -3,6 +3,36 @@
   const clampPressure = (value) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
   const widthAt = (width, pressure) => Math.max(1, width * (0.2 + 0.8 * pressure));
 
+  // ---------------------------------------------------------------------------
+  // EMA low-pass filter — matches ScreenBrush's ISSWLowpassFilter exactly.
+  //
+  //   α_prev = 6/7 ≈ 0.857142857  (weight of the previous smoothed value)
+  //   α_curr = 1/7 ≈ 0.142857142  (weight of the new raw sample)
+  //
+  // In the browser we don't need a GCD timer: pointer events already arrive at
+  // display rate (~60 fps). We apply the filter inline on each event, keeping
+  // per-stroke state in a WeakMap so it is garbage-collected with the stroke.
+  // ---------------------------------------------------------------------------
+  const ALPHA_PREV = 6 / 7;
+  const ALPHA_CURR = 1 / 7;
+
+  // WeakMap<stroke object → { x, y, pressure, seeded }>
+  const filterState = new WeakMap();
+
+  function emaFilter(stroke, rawX, rawY, rawPressure) {
+    let state = filterState.get(stroke);
+    if (!state) {
+      // Seed with the first real sample — no warm-up lag.
+      state = { x: rawX, y: rawY, pressure: rawPressure, seeded: true };
+      filterState.set(stroke, state);
+      return { x: rawX, y: rawY, pressure: rawPressure };
+    }
+    state.x        = rawX        * ALPHA_CURR + state.x        * ALPHA_PREV;
+    state.y        = rawY        * ALPHA_CURR + state.y        * ALPHA_PREV;
+    state.pressure = rawPressure * ALPHA_CURR + state.pressure * ALPHA_PREV;
+    return { x: state.x, y: state.y, pressure: state.pressure };
+  }
+
   // Centripetal Catmull–Rom controls keep unevenly spaced input samples from
   // overshooting at corners. Canvas rasterizes the actual cubic curves.
   function controls(points, index) {
@@ -108,15 +138,24 @@
   function appendSamples(stroke, event, scroll = { x: 0, y: 0 }) {
     if (!stroke.pressures) stroke.pressures = stroke.points.map(() => 1);
     const coalesced = typeof event.getCoalescedEvents === 'function' ? event.getCoalescedEvents() : [];
+    // Only filter free-draw strokes (pen / highlighter). Shape strokes need raw
+    // endpoints, and the filter only applies while the stroke is in progress.
+    const applyFilter = stroke.shape === 'free' && event.type !== 'pointerup';
     for (const sample of [...coalesced, event]) {
       if (!Number.isFinite(sample.clientX) || !Number.isFinite(sample.clientY)) continue;
-      const point = { x: sample.clientX + scroll.x, y: sample.clientY + scroll.y };
+      const rawX = sample.clientX + scroll.x;
+      const rawY = sample.clientY + scroll.y;
       const last = stroke.points.length - 1;
       const isPen = (sample.pointerType || event.pointerType) === 'pen';
       // Pointer-up pressure is always zero; keep the last contact pressure.
-      const pressure = event.type === 'pointerup'
+      const rawPressure = event.type === 'pointerup'
         ? (stroke.pressures[last] ?? 1)
         : (isPen ? clampPressure(sample.pressure) : 1);
+      // Apply EMA filter to position + pressure for free-draw strokes.
+      const { x, y, pressure } = applyFilter
+        ? emaFilter(stroke, rawX, rawY, rawPressure)
+        : { x: rawX, y: rawY, pressure: rawPressure };
+      const point = { x, y };
       if (last >= 0 && Math.hypot(point.x - stroke.points[last].x, point.y - stroke.points[last].y) < 0.01) {
         stroke.pressures[last] = pressure;
       } else {

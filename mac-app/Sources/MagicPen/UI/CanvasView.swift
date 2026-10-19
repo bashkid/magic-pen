@@ -10,6 +10,9 @@ final class CanvasView: NSView {
     private var textFieldOrigin: CGPoint = .zero
     private var lastPenPressure: CGFloat = 1
 
+    // ScreenBrush-style EMA low-pass filter for pen strokes (α=1/7 @ 60 fps)
+    private let pressureFilter = PressureFilter()
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
@@ -237,6 +240,16 @@ final class CanvasView: NSView {
         lastPenPressure = pressure(from: event, fallback: 1)
         state.currentStroke = Stroke(shape: shape, color: cfg.color, width: cfg.width, alpha: cfg.alpha,
                                      points: [p], pressures: [lastPenPressure])
+
+        // Start the EMA filter only for free-draw pen strokes
+        if shape == .free {
+            pressureFilter.start { [weak self] smoothedPoint, smoothedPressure in
+                self?.appendStrokeSample(at: smoothedPoint, pressure: smoothedPressure)
+                self?.state.announceLive()
+            }
+            pressureFilter.push(p, pressure: lastPenPressure)
+        }
+
         state.announceLive()
     }
 
@@ -252,7 +265,12 @@ final class CanvasView: NSView {
             break
         default:
             lastPenPressure = pressure(from: event, fallback: lastPenPressure)
-            appendStrokeSample(at: p, pressure: lastPenPressure)
+            if state.currentStroke?.shape == .free {
+                // Feed raw input into the filter; the timer callback writes the smoothed sample
+                pressureFilter.push(p, pressure: lastPenPressure)
+            } else {
+                appendStrokeSample(at: p, pressure: lastPenPressure)
+            }
         }
         state.announceLive()
     }
@@ -260,12 +278,17 @@ final class CanvasView: NSView {
     override func pressureChange(with event: NSEvent) {
         guard state.active, state.currentStroke?.shape == .free else { return }
         lastPenPressure = min(max(CGFloat(event.pressure), 0), 1)
-        appendStrokeSample(at: globalPoint(from: event), pressure: lastPenPressure)
+        // Feed updated pressure + current position into the filter
+        pressureFilter.push(globalPoint(from: event), pressure: lastPenPressure)
         state.announceLive()
     }
 
     override func mouseUp(with event: NSEvent) {
         guard state.active else { return }
+        // Stop the filter first — it flushes a final smoothed sample if needed
+        if state.currentStroke?.shape == .free {
+            pressureFilter.stop()
+        }
         if var cur = state.currentStroke, !cur.points.isEmpty {
             if cur.shape != .free, cur.points.count == 1 {
                 cur.points.append(cur.points[0])
