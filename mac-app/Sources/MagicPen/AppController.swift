@@ -14,13 +14,10 @@ final class AppController {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
             if let logo = Icons.logo {
-                // Same white circular backdrop as the toolbar's logo -
-                // matches the extension's `.logo img { background:#fff }`
-                // instead of a bare glyph floating in the menu bar.
+                // Keep the compact Magic Pen mark visible in the menu bar.
                 let resized = NSImage(size: NSSize(width: 18, height: 18))
                 resized.lockFocus()
-                NSColor.white.setFill()
-                NSBezierPath(ovalIn: NSRect(x: 0, y: 0, width: 18, height: 18)).fill()
+                NSBezierPath(ovalIn: NSRect(x: 0, y: 0, width: 18, height: 18)).addClip()
                 logo.draw(in: NSRect(x: 0, y: 0, width: 18, height: 18))
                 resized.unlockFocus()
                 button.image = resized

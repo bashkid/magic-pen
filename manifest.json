@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Magic Pen",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Draw, highlight, laser-point and screen-record on any page. Recordings save straight to disk.",
   "permissions": [
     "desktopCapture",
@@ -19,7 +19,19 @@
     "service_worker": "src/background.js"
   },
   "action": {
-    "default_title": "Toggle annotator (draw on this page)"
+    "default_title": "Toggle Magic Pen (draw on this page)",
+    "default_icon": {
+      "16": "src/icons/magicpen-16.png",
+      "32": "src/icons/magicpen-32.png",
+      "48": "src/icons/magicpen-48.png",
+      "128": "src/icons/magicpen-128.png"
+    }
+  },
+  "icons": {
+    "16": "src/icons/magicpen-16.png",
+    "32": "src/icons/magicpen-32.png",
+    "48": "src/icons/magicpen-48.png",
+    "128": "src/icons/magicpen-128.png"
   },
   "content_scripts": [
     {

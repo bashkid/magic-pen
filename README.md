@@ -7,6 +7,8 @@ The desktop app draws over your Mac workspace. The Chrome extension draws over w
 
 **Download:** [Latest GitHub release](https://github.com/bashkid/magic-pen/releases/latest), with separate ZIP downloads for Chrome and macOS.
 
+<p align="center"><img src="docs/images/magic-pen-logo.png" alt="Magic Pen app logo" width="160"></p>
+
 ![Magic Pen toolbar and drawing tools in the Chrome extension](docs/images/product-preview.png)
 
 *Product preview uses the Chrome extension’s actual toolbar and stroke renderer. The macOS version uses native AppKit controls.*
@@ -83,7 +85,7 @@ Local `file://` pages also require Chrome’s **Allow access to file URLs** sett
 
 ## Build and run the macOS app
 
-To use a prebuilt app, download the **Mac ZIP** from the [latest release](https://github.com/bashkid/magic-pen/releases/latest), extract it, and move `MagicPen.app` to Applications. Version 0.2.1 supports Apple silicon and Intel Macs running macOS 14 or later. The app is locally signed and is not notarized; macOS may require approval in Privacy & Security before first launch.
+To use a prebuilt app, download the **Mac ZIP** from the [latest release](https://github.com/bashkid/magic-pen/releases/latest), extract it, and move `MagicPen.app` to Applications. Version 0.2.3 supports Apple silicon and Intel Macs running macOS 14 or later. The app is locally signed and is not notarized; macOS may require approval in Privacy & Security before first launch.
 
 ### Requirements
 
@@ -218,7 +220,7 @@ Desktop shortcuts are handled when Magic Pen receives keyboard events. Drawing s
 |---|---|
 | `Cannot access a chrome:// URL` | Open a regular website before clicking Magic Pen. Reload the updated extension and clear old error entries if Chrome still displays a previous log. |
 | Extension toolbar does not appear | Confirm the extension is enabled and has site access. Refresh the webpage after reloading the extension. |
-| Circles still look polygonal after updating | Confirm version **0.2.1** is loaded, reload the extension, and refresh the website so it uses the new renderer. |
+| Circles still look polygonal after updating | Confirm the latest version is loaded, reload the extension, and refresh the website so it uses the new renderer. |
 | Duplicate Magic Pen toolbars | Check for multiple loaded copies of the extension and disable the extra copy. |
 | Pen pressure has no effect | The device, driver, OS, and browser must report pressure. A normal mouse keeps constant width. |
 | Chrome screenshot copying fails | Check the toolbar status message and the page’s clipboard restrictions. Saving a PNG is a separate capture option. |

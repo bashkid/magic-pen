@@ -91,10 +91,8 @@ final class ToolbarView: NSView {
         logo.wantsLayer = true
         logo.layer?.cornerRadius = 19
         logo.layer?.masksToBounds = true
-        // The extension's `.logo img` has `background:#fff` behind the
-        // (transparent) glyph - a white circular backdrop, not just a bare
-        // icon floating over the desktop.
-        logo.layer?.backgroundColor = NSColor.white.cgColor
+        // Match the extension's dark-backed Magic Pen brand mark.
+        logo.layer?.backgroundColor = NSColor(calibratedRed: 16/255, green: 20/255, blue: 39/255, alpha: 1).cgColor
         addSubview(logo)
         NSLayoutConstraint.activate([
             logo.topAnchor.constraint(equalTo: topAnchor, constant: 6),

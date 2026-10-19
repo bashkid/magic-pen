@@ -2,11 +2,13 @@
 
 A native menu-bar annotation app for drawing, highlighting, presenting, screenshots, and screen recording over your Mac workspace.
 
+<p align="center"><img src="../docs/images/magic-pen-logo.png" alt="Magic Pen app logo" width="160"></p>
+
 See the [main README](../README.md) for the complete feature comparison, Chrome installation, and project overview.
 
 ## Install a released app
 
-Download the **Mac ZIP** from the [latest GitHub release](https://github.com/bashkid/magic-pen/releases/latest), extract it, and move `MagicPen.app` to Applications. Version 0.2.1 includes Apple silicon and Intel executables in one app bundle and requires macOS 14 or later.
+Download the **Mac ZIP** from the [latest GitHub release](https://github.com/bashkid/magic-pen/releases/latest), extract it, and move `MagicPen.app` to Applications. Version 0.2.3 includes Apple silicon and Intel executables in one app bundle and requires macOS 14 or later.
 
 The app is locally signed and is not notarized. If macOS blocks its first launch, use the system approval option in **System Settings → Privacy & Security**. Screen capture may require a separate permission grant.
 

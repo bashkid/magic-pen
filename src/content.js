@@ -536,7 +536,7 @@
       .logo svg { width: 38px; height: 38px; }
       .logo img {
         width: 38px; height: 38px; object-fit: contain; border-radius: 50%;
-        background: #fff; -webkit-user-drag: none; user-drag: none;
+        background: #101427; -webkit-user-drag: none; user-drag: none;
         -webkit-user-select: none; user-select: none; pointer-events: none;
       }
       .strip {
