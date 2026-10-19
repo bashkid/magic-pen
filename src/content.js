@@ -23,6 +23,7 @@
 (() => {
   if (window.__myAnnotatorLoaded) return;
   window.__myAnnotatorLoaded = true;
+  const strokeRenderer = globalThis.MagicPenStrokeRenderer;
 
   // Quick blocks shown in the 2x2 grid, then the wider palette in flyouts.
   const QUICK = ['#000000', '#ffffff', '#ec008c', '#00aeef'];
@@ -161,6 +162,7 @@
   let strokes = [];
   let undone = [];
   let current = null;
+  let activePointerId = null;
   let laserPoints = [];
   let selection = null;
   let rafId = null;
@@ -213,6 +215,12 @@
       return;
     }
 
+    if (s.shape === 'free') {
+      strokeRenderer.draw(ctx, s);
+      ctx.globalAlpha = 1;
+      return;
+    }
+
     ctx.beginPath();
     if (s.shape === 'line') {
       ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
@@ -221,10 +229,6 @@
     } else if (s.shape === 'ellipse') {
       ctx.ellipse((a.x + b.x) / 2, (a.y + b.y) / 2,
         Math.abs(b.x - a.x) / 2, Math.abs(b.y - a.y) / 2, 0, 0, Math.PI * 2);
-    } else {
-      ctx.moveTo(a.x, a.y);
-      for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i].x, s.points[i].y);
-      if (s.points.length === 1) ctx.lineTo(a.x + 0.1, a.y);
     }
     ctx.stroke();
     ctx.globalAlpha = 1;
@@ -336,10 +340,14 @@
 
   // ---------------------------------------------------------------- pointers
   const pageXY = (e) => ({ x: e.clientX + window.scrollX, y: e.clientY + window.scrollY });
+  const appendPointerSamples = (event) => strokeRenderer.appendSamples(current, event,
+    { x: window.scrollX, y: window.scrollY });
 
   liveCanvas.addEventListener('pointerdown', (e) => {
-    if (!active || tool === 'pointer') return;
+    if (!active || tool === 'pointer' || e.button !== 0 || e.isPrimary === false || activePointerId !== null) return;
+    e.preventDefault();
     closeFlyout();
+    activePointerId = e.pointerId;
     liveCanvas.setPointerCapture(e.pointerId);
 
     if (tool === 'shot') {
@@ -355,12 +363,20 @@
     }
 
     const cfg = TOOLS[tool];
-    current = { shape: cfg.shape, color: cfg.color, width: cfg.width, alpha: cfg.alpha, points: [pageXY(e)] };
+    current = { shape: cfg.shape, color: cfg.color, width: cfg.width, alpha: cfg.alpha,
+      points: [], pressures: [] };
+    appendPointerSamples(e);
     pump();
   });
 
   liveCanvas.addEventListener('pointermove', (e) => {
     if (!active || tool === 'pointer') return;
+
+    if (tool === 'laser') {
+      laserPoints.push({ x: e.clientX, y: e.clientY, t: performance.now() });
+      pump(); return;
+    }
+    if (e.pointerId !== activePointerId) return;
 
     if (tool === 'shot') {
       if (!selection) return;
@@ -370,17 +386,15 @@
       selection.h = Math.abs(e.clientY - selection.oy);
       pump(); return;
     }
-    if (tool === 'laser') {
-      laserPoints.push({ x: e.clientX, y: e.clientY, t: performance.now() });
-      pump(); return;
-    }
     if (!current) return;
     if (current.eraser) { const p = pageXY(e); eraseAt(p.x, p.y); return; }
-    current.points.push(pageXY(e));
+    appendPointerSamples(e);
     pump();
   });
 
-  async function endStroke() {
+  async function endStroke(event) {
+    if (event.pointerId !== activePointerId) return;
+    activePointerId = null;
     if (tool === 'shot' && selection) {
       const region = (selection.w > 4 && selection.h > 4) ? { ...selection } : null;
       selection = null; drawLive();
@@ -388,12 +402,14 @@
       return;
     }
     if (current && !current.eraser && current.points.length) {
+      if (event.type === 'pointerup') appendPointerSamples(event);
       strokes.push(current); undone = []; redraw();
     }
     current = null; drawLive();
   }
   liveCanvas.addEventListener('pointerup', endStroke);
   liveCanvas.addEventListener('pointercancel', endStroke);
+  liveCanvas.addEventListener('lostpointercapture', endStroke);
 
   window.addEventListener('resize', sizeCanvases);
   window.addEventListener('scroll', redraw, { passive: true });
@@ -899,6 +915,9 @@
       document.documentElement.append(shade, strokeCanvas, liveCanvas, host);
       sizeCanvases(); syncUI(); restoreAnnotations(true);
     } else {
+      activePointerId = null;
+      current = null;
+      selection = null;
       shade.remove(); strokeCanvas.remove(); liveCanvas.remove(); host.remove();
     }
   }

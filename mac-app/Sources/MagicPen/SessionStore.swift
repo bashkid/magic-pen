@@ -15,6 +15,7 @@ final class SessionStore {
         let alpha: CGFloat
         let width: CGFloat
         let points: [Point]
+        let pressures: [CGFloat]?
         let text: String
         let fontSize: CGFloat
     }
@@ -30,7 +31,8 @@ final class SessionStore {
         let state = AnnotatorState.shared
         let dtos = state.strokesSnapshot().map { s -> DTO in
             DTO(shape: shapeString(s.shape), colorHex: s.color.hexString, alpha: s.alpha, width: s.width,
-                points: s.points.map { DTO.Point(x: $0.x, y: $0.y) }, text: s.text, fontSize: s.fontSize)
+                points: s.points.map { DTO.Point(x: $0.x, y: $0.y) }, pressures: s.pressures,
+                text: s.text, fontSize: s.fontSize)
         }
         guard let data = try? JSONEncoder().encode(dtos) else { return }
         try? data.write(to: fileURL)
@@ -41,7 +43,8 @@ final class SessionStore {
               let dtos = try? JSONDecoder().decode([DTO].self, from: data) else { return }
         let strokes = dtos.map { dto -> Stroke in
             Stroke(shape: shapeKind(dto.shape), color: NSColor(hex: dto.colorHex), width: dto.width, alpha: dto.alpha,
-                   points: dto.points.map { CGPoint(x: $0.x, y: $0.y) }, text: dto.text, fontSize: dto.fontSize)
+                   points: dto.points.map { CGPoint(x: $0.x, y: $0.y) }, pressures: dto.pressures ?? [],
+                   text: dto.text, fontSize: dto.fontSize)
         }
         AnnotatorState.shared.replaceAll(with: strokes)
     }

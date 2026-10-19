@@ -23,6 +23,7 @@ struct Stroke {
     var width: CGFloat
     var alpha: CGFloat
     var points: [CGPoint] = []
+    var pressures: [CGFloat] = []
     var text: String = ""
     var fontSize: CGFloat = 20
 }

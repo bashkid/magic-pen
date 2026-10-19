@@ -2,16 +2,54 @@
 // It has no DOM, so MediaRecorder work is delegated to an offscreen document.
 
 const OFFSCREEN_PATH = 'src/offscreen.html';
+const ACTION_TITLE = 'Toggle Magic Pen (draw on this page)';
+const UNSUPPORTED_PAGE_MESSAGE = 'Open a regular website, then click Magic Pen. Chrome pages and the Chrome Web Store cannot be annotated.';
+
+function pageRestriction(url) {
+  try {
+    const page = new URL(url);
+    const supportedProtocol = ['http:', 'https:', 'file:'].includes(page.protocol);
+    const isWebStore = page.hostname === 'chromewebstore.google.com'
+      || (page.hostname === 'chrome.google.com'
+        && (page.pathname === '/webstore' || page.pathname.startsWith('/webstore/')));
+    return supportedProtocol && !isWebStore ? null : UNSUPPORTED_PAGE_MESSAGE;
+  } catch {
+    return UNSUPPORTED_PAGE_MESSAGE;
+  }
+}
+
+async function setActionStatus(tabId, message = '') {
+  await Promise.all([
+    chrome.action.setBadgeText({ tabId, text: message ? '!' : '' }),
+    chrome.action.setBadgeBackgroundColor({ tabId, color: '#b45309' }),
+    chrome.action.setTitle({ tabId, title: message ? `Magic Pen: ${message}` : ACTION_TITLE })
+  ]);
+}
 
 // --- toolbar button toggles the on-page overlay -----------------------------
 chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id) return;
+  if (!Number.isInteger(tab.id) || tab.id < 0) return;
   try {
-    await chrome.tabs.sendMessage(tab.id, { type: 'ANNOTATOR_TOGGLE' });
-  } catch {
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['src/content.css'] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['src/content.js'] });
-    await chrome.tabs.sendMessage(tab.id, { type: 'ANNOTATOR_TOGGLE' });
+    const restriction = pageRestriction(tab.url);
+    if (restriction) {
+      await setActionStatus(tab.id, restriction);
+      return;
+    }
+    await setActionStatus(tab.id);
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: 'ANNOTATOR_TOGGLE' });
+    } catch {
+      await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['src/content.css'] });
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['src/stroke-renderer.js', 'src/content.js'] });
+      await chrome.tabs.sendMessage(tab.id, { type: 'ANNOTATOR_TOGGLE' });
+    }
+  } catch (error) {
+    const message = `Could not start drawing: ${error.message || error}. Refresh the page and check site access.`;
+    try {
+      await setActionStatus(tab.id, message);
+    } catch (statusError) {
+      console.error('Magic Pen could not display its launch status:', statusError);
+    }
   }
 });
 

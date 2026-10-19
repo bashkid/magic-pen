@@ -19,15 +19,14 @@ cp .build/release/MagicPen "$APP/Contents/MacOS/MagicPen"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
-# The SPM resource bundle (icons) that the MagicPen executable loads at
-# runtime via Bundle.module - must sit next to the binary for release builds.
-RES_BUNDLE="$APP/Contents/MacOS/MagicPen_MagicPen.bundle"
+# Bundle.module searches the app's resource directory for the icon bundle.
+RES_BUNDLE="$APP/Contents/Resources/MagicPen_MagicPen.bundle"
 if [ -d .build/release/MagicPen_MagicPen.bundle ]; then
-  cp -R .build/release/MagicPen_MagicPen.bundle "$APP/Contents/MacOS/"
-  # codesign refuses to seal a directory named *.bundle unless it looks like
-  # a real CFBundle (needs an Info.plist) - SPM's generated one is just a
-  # loose resource folder, so give it a minimal plist to satisfy codesign.
-  cat > "$RES_BUNDLE/Info.plist" <<'PLIST'
+  cp -R .build/release/MagicPen_MagicPen.bundle "$APP/Contents/Resources/"
+  # Current SwiftPM emits a complete macOS bundle. Older toolchains emit a
+  # flat resource folder that needs a plist before codesign can seal it.
+  if [ ! -f "$RES_BUNDLE/Contents/Info.plist" ] && [ ! -f "$RES_BUNDLE/Info.plist" ]; then
+    cat > "$RES_BUNDLE/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -39,6 +38,7 @@ if [ -d .build/release/MagicPen_MagicPen.bundle ]; then
 </dict>
 </plist>
 PLIST
+  fi
 fi
 
 echo "Signing (ad-hoc, for a stable local identity)..."

@@ -8,6 +8,7 @@ final class CanvasView: NSView {
     private var fadeTimer: Timer?
     private var activeTextField: NSTextField?
     private var textFieldOrigin: CGPoint = .zero
+    private var lastPenPressure: CGFloat = 1
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -82,9 +83,116 @@ final class CanvasView: NSView {
                                             withAttributes: attrs)
             return
         }
+        if stroke.shape == .free {
+            drawFreeStroke(stroke)
+            return
+        }
         let path = path(for: stroke)
         stroke.color.withAlphaComponent(stroke.alpha).setStroke()
         path.stroke()
+    }
+
+    private func drawFreeStroke(_ stroke: Stroke) {
+        let points = stroke.points.map(local)
+        guard let first = points.first else { return }
+        let pressures = stroke.points.indices.map { index -> CGFloat in
+            guard index < stroke.pressures.count else { return 1 }
+            return min(max(stroke.pressures[index], 0), 1)
+        }
+        let color = stroke.color.withAlphaComponent(stroke.alpha)
+        color.setStroke()
+
+        guard points.count > 1 else {
+            let width = stroke.width * pressureScale(pressures.first ?? 1)
+            color.setFill()
+            NSBezierPath(ovalIn: NSRect(x: first.x - width / 2, y: first.y - width / 2,
+                                        width: width, height: width)).fill()
+            return
+        }
+
+        var samples: [(point: CGPoint, radius: CGFloat)] = []
+        for index in 0..<(points.count - 1) {
+            let p0 = points[max(index - 1, 0)]
+            let p1 = points[index]
+            let p2 = points[index + 1]
+            let p3 = points[min(index + 2, points.count - 1)]
+            let control1 = CGPoint(x: p1.x + (p2.x - p0.x) / 6,
+                                   y: p1.y + (p2.y - p0.y) / 6)
+            let control2 = CGPoint(x: p2.x - (p3.x - p1.x) / 6,
+                                   y: p2.y - (p3.y - p1.y) / 6)
+            let distance = hypot(p2.x - p1.x, p2.y - p1.y)
+            let steps = min(max(Int(distance / 5), 2), 8)
+            let startPressure = pressures[index]
+            let endPressure = pressures[index + 1]
+
+            for step in (index == 0 ? 0 : 1)...steps {
+                let t = CGFloat(step) / CGFloat(steps)
+                let inverse = 1 - t
+                let point = CGPoint(
+                    x: inverse * inverse * inverse * p1.x + 3 * inverse * inverse * t * control1.x
+                        + 3 * inverse * t * t * control2.x + t * t * t * p2.x,
+                    y: inverse * inverse * inverse * p1.y + 3 * inverse * inverse * t * control1.y
+                        + 3 * inverse * t * t * control2.y + t * t * t * p2.y
+                )
+                let pressure = startPressure + (endPressure - startPressure) * t
+                samples.append((point, max(1, stroke.width * pressureScale(pressure)) / 2))
+            }
+        }
+
+        guard let first = samples.first, let last = samples.last else { return }
+        var leftEdge: [CGPoint] = []
+        var rightEdge: [CGPoint] = []
+        for index in samples.indices {
+            let previous = samples[max(index - 1, 0)].point
+            let next = samples[min(index + 1, samples.count - 1)].point
+            var dx = next.x - previous.x
+            var dy = next.y - previous.y
+            let length = hypot(dx, dy)
+            if length > 0.001 { dx /= length; dy /= length } else { dx = 1; dy = 0 }
+            let offsetX = -dy * samples[index].radius
+            let offsetY = dx * samples[index].radius
+            leftEdge.append(CGPoint(x: samples[index].point.x + offsetX,
+                                    y: samples[index].point.y + offsetY))
+            rightEdge.append(CGPoint(x: samples[index].point.x - offsetX,
+                                     y: samples[index].point.y - offsetY))
+        }
+
+        let outline = NSBezierPath()
+        outline.move(to: leftEdge[0])
+        for point in leftEdge.dropFirst() { outline.line(to: point) }
+        for point in rightEdge.reversed() { outline.line(to: point) }
+        outline.close()
+        color.setFill()
+        outline.fill()
+        for sample in [first, last] {
+            let diameter = sample.radius * 2
+            NSBezierPath(ovalIn: NSRect(x: sample.point.x - sample.radius,
+                                        y: sample.point.y - sample.radius,
+                                        width: diameter, height: diameter)).fill()
+        }
+    }
+
+    private func pressureScale(_ pressure: CGFloat) -> CGFloat {
+        0.2 + 0.8 * min(max(pressure, 0), 1)
+    }
+
+    private func pressure(from event: NSEvent, fallback: CGFloat) -> CGFloat {
+        let value = CGFloat(event.pressure)
+        let carriesPressure = event.type == .pressure || event.type == .tabletPoint
+            || (value > 0 && value < 1)
+        return carriesPressure ? min(max(value, 0), 1) : fallback
+    }
+
+    private func appendStrokeSample(at point: CGPoint, pressure: CGFloat) {
+        guard var stroke = state.currentStroke else { return }
+        if let index = stroke.points.indices.last,
+           hypot(stroke.points[index].x - point.x, stroke.points[index].y - point.y) < 0.5 {
+            if stroke.pressures.indices.contains(index) { stroke.pressures[index] = pressure }
+        } else {
+            stroke.points.append(point)
+            stroke.pressures.append(pressure)
+        }
+        state.currentStroke = stroke
     }
 
     private func drawLaser() {
@@ -126,7 +234,9 @@ final class CanvasView: NSView {
         }
         let cfg = state.tools[state.currentTool]!
         let shape: ShapeKind = [.line: ShapeKind.line, .rect: .rect, .ellipse: .ellipse][state.currentTool] ?? .free
-        state.currentStroke = Stroke(shape: shape, color: cfg.color, width: cfg.width, alpha: cfg.alpha, points: [p])
+        lastPenPressure = pressure(from: event, fallback: 1)
+        state.currentStroke = Stroke(shape: shape, color: cfg.color, width: cfg.width, alpha: cfg.alpha,
+                                     points: [p], pressures: [lastPenPressure])
         state.announceLive()
     }
 
@@ -141,15 +251,26 @@ final class CanvasView: NSView {
         case .text:
             break
         default:
-            state.currentStroke?.points.append(p)
+            lastPenPressure = pressure(from: event, fallback: lastPenPressure)
+            appendStrokeSample(at: p, pressure: lastPenPressure)
         }
+        state.announceLive()
+    }
+
+    override func pressureChange(with event: NSEvent) {
+        guard state.active, state.currentStroke?.shape == .free else { return }
+        lastPenPressure = min(max(CGFloat(event.pressure), 0), 1)
+        appendStrokeSample(at: globalPoint(from: event), pressure: lastPenPressure)
         state.announceLive()
     }
 
     override func mouseUp(with event: NSEvent) {
         guard state.active else { return }
         if var cur = state.currentStroke, !cur.points.isEmpty {
-            if cur.shape != .free, cur.points.count == 1 { cur.points.append(cur.points[0]) }
+            if cur.shape != .free, cur.points.count == 1 {
+                cur.points.append(cur.points[0])
+                cur.pressures.append(cur.pressures.first ?? 1)
+            }
             state.commit(cur)
         }
         state.currentStroke = nil
