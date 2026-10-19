@@ -9,20 +9,21 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "Building release binary..."
-swift build -c release
+swift build -c release "$@"
+BUILD_PRODUCTS="$(swift build -c release --show-bin-path "$@")"
 
 APP="MagicPen.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-cp .build/release/MagicPen "$APP/Contents/MacOS/MagicPen"
+cp "$BUILD_PRODUCTS/MagicPen" "$APP/Contents/MacOS/MagicPen"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
 # Bundle.module searches the app's resource directory for the icon bundle.
 RES_BUNDLE="$APP/Contents/Resources/MagicPen_MagicPen.bundle"
-if [ -d .build/release/MagicPen_MagicPen.bundle ]; then
-  cp -R .build/release/MagicPen_MagicPen.bundle "$APP/Contents/Resources/"
+if [ -d "$BUILD_PRODUCTS/MagicPen_MagicPen.bundle" ]; then
+  cp -R "$BUILD_PRODUCTS/MagicPen_MagicPen.bundle" "$APP/Contents/Resources/"
   # Current SwiftPM emits a complete macOS bundle. Older toolchains emit a
   # flat resource folder that needs a plist before codesign can seal it.
   if [ ! -f "$RES_BUNDLE/Contents/Info.plist" ] && [ ! -f "$RES_BUNDLE/Info.plist" ]; then

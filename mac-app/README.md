@@ -4,6 +4,12 @@ A native menu-bar annotation app for drawing, highlighting, presenting, screensh
 
 See the [main README](../README.md) for the complete feature comparison, Chrome installation, and project overview.
 
+## Install a released app
+
+Download the **Mac ZIP** from the [latest GitHub release](https://github.com/bashkid/magic-pen/releases/latest), extract it, and move `MagicPen.app` to Applications. Version 0.2.1 includes Apple silicon and Intel executables in one app bundle and requires macOS 14 or later.
+
+The app is locally signed and is not notarized. If macOS blocks its first launch, use the system approval option in **System Settings → Privacy & Security**. Screen capture may require a separate permission grant.
+
 ## Requirements
 
 - macOS **14 or later**.
@@ -178,3 +184,9 @@ Paths below are relative to `Sources/MagicPen/` unless noted.
 | `mac-app/build_app.sh` | Release packaging at the package root |
 
 Run `swift build` from `mac-app/` for a development build. Run `./build_app.sh` to recreate the release app bundle. Generated `.build/` files and `MagicPen.app/` are ignored by Git.
+
+For a universal release build, pass both architectures to the packaging script:
+
+```bash
+./build_app.sh --arch arm64 --arch x86_64
+```

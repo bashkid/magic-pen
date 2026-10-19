@@ -5,6 +5,8 @@ Magic Pen includes a **native macOS desktop app** and a **Chrome extension** in 
 
 The desktop app draws over your Mac workspace. The Chrome extension draws over webpages and keeps saved annotations associated with each page.
 
+**Download:** [Latest GitHub release](https://github.com/bashkid/magic-pen/releases/latest), with separate ZIP downloads for Chrome and macOS.
+
 ![Magic Pen toolbar and drawing tools in the Chrome extension](docs/images/product-preview.png)
 
 *Product preview uses the Chrome extension’s actual toolbar and stroke renderer. The macOS version uses native AppKit controls.*
@@ -49,6 +51,8 @@ No account, application server, or subscription is required.
 
 ## Install the Chrome extension
 
+For a packaged download, open the [latest release](https://github.com/bashkid/magic-pen/releases/latest), download the **Chrome extension ZIP**, and extract it. Follow the **Load unpacked** steps below using that extracted folder.
+
 ### Load from this repository
 
 1. Clone the repository, or choose **Code → Download ZIP** on GitHub and extract it.
@@ -78,6 +82,8 @@ Use Magic Pen on regular websites. Chrome blocks content-script injection on int
 Local `file://` pages also require Chrome’s **Allow access to file URLs** setting in the extension’s details.
 
 ## Build and run the macOS app
+
+To use a prebuilt app, download the **Mac ZIP** from the [latest release](https://github.com/bashkid/magic-pen/releases/latest), extract it, and move `MagicPen.app` to Applications. Version 0.2.1 supports Apple silicon and Intel Macs running macOS 14 or later. The app is locally signed and is not notarized; macOS may require approval in Privacy & Security before first launch.
 
 ### Requirements
 
@@ -272,3 +278,9 @@ open MagicPen.app
 ```
 
 Native build products, generated app bundles, and local graph-analysis files are excluded from Git. Rebuild the app bundle after changing native source. Refresh both the extension and the webpage after changing Chrome content scripts.
+
+To package a universal Mac release with both supported architectures:
+
+```bash
+./mac-app/build_app.sh --arch arm64 --arch x86_64
+```
